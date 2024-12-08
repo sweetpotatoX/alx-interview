@@ -3,52 +3,53 @@
 import sys
 
 
-def print_msg(dict_sc, total_file_size):
+def print_msg(status_counts, total_size):
     """
-    Method to print
+    Prints accumulated metrics.
     Args:
-        dict_sc: dict of status codes
-        total_file_size: total of the file
-    Returns:
-        Nothing
+        status_counts: Dictionary with status code counts
+        total_size: Total size of processed files
     """
+    print("File size: {}".format(total_size))
+    for key in sorted(status_counts.keys()):
+        if status_counts[key] > 0:
+            print("{}: {}".format(key, status_counts[key]))
 
-    print("File size: {}".format(total_file_size))
-    for key, val in sorted(dict_sc.items()):
-        if val != 0:
-            print("{}: {}".format(key, val))
 
-
-total_file_size = 0
-code = 0
-counter = 0
-dict_sc = {"200": 0,
-           "301": 0,
-           "400": 0,
-           "401": 0,
-           "403": 0,
-           "404": 0,
-           "405": 0,
-           "500": 0}
+# Initialize counters
+total_size = 0
+status_counts = {
+    "200": 0,
+    "301": 0,
+    "400": 0,
+    "401": 0,
+    "403": 0,
+    "404": 0,
+    "405": 0,
+    "500": 0
+}
+line_count = 0
 
 try:
     for line in sys.stdin:
-        parsed_line = line.split()  # ✄ trimming
-        parsed_line = parsed_line[::-1]  # inverting
+        try:
+            parts = line.split()
+            # Parse file size and status code
+            file_size = int(parts[-1])
+            status_code = parts[-2]
 
-        if len(parsed_line) > 2:
-            counter += 1
+            # Update counters
+            total_size += file_size
+            if status_code in status_counts:
+                status_counts[status_code] += 1
 
-            if counter <= 10:
-                total_file_size += int(parsed_line[0])  # file size
-                code = parsed_line[1]  # status code
-
-                if (code in dict_sc.keys()):
-                    dict_sc[code] += 1
-
-            if (counter == 10):
-                print_msg(dict_sc, total_file_size)
-                counter = 0
-
+            # Increment line counter and print every 10 lines
+            line_count += 1
+            if line_count % 10 == 0:
+                print_msg(status_counts, total_size)
+        except (IndexError, ValueError):
+            # Skip malformed lines
+            continue
 finally:
-    print_msg(dict_sc, total_file_size)
+    # Print final statistics
+    print_msg(status_counts, total_size)
